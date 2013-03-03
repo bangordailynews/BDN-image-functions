@@ -25,15 +25,18 @@ if( !function_exists( 'bdn_has_images' ) ) {
 			'post_status' => 'inherit',
 			'post_type' => 'attachment',
 			//'post_mime_type' => 'image'
-			//Disabling post mime type unless it becomes an issue. Just adds another unnecessary where clause
+			//By default, we aren't filtering on MIME type because it
+			//a where clause on an unindexted column. If you upload more than
+			//just images to posts, you might have to uncomment that line
+			
 		);
 		
 		$args = wp_parse_args( $args, $defaults );
 		
-		//asort so we're always using the exact same array
+		//asort the args so we're always using the exact same array for the cache key
 		asort( $args );
 		
-		$key = md5( serialize( $args ) );
+		$key = 'bdn_images_' . md5( serialize( $args ) );
 		
 		$images = wp_cache_get( $key );
 		if ( false === $images ) {
@@ -96,7 +99,7 @@ if( !function_exists( 'bdn_has_images' ) ) {
 	* Gets the images attached to the article
 	* All the variables except $id and $args are deprecated.
 	*/
-	function bdn_image( $id, $args = array(), $width = 600, $showcaption = false, $link = false, $number = 1, $class = 'image', $offset = 0 ) {
+	function bdn_image( $id, $args = array() ) {
 
 		$id = intval( $id );
 		
@@ -122,7 +125,7 @@ if( !function_exists( 'bdn_has_images' ) ) {
 		
 		$images = bdn_get_images( $id, array( 'numberposts' => $numberposts, 'offset' => $offset, 'order' => $order, 'orderby' => $orderby, 'post_status' => $post_status, 'post_type' => $post_type ) );
 		
-		if( $images ) {
+		if( $images && is_array( $images ) ) {
 			foreach( $images as $image ) {
 			
 				$meta = wp_get_attachment_metadata( $image );
@@ -145,7 +148,7 @@ if( !function_exists( 'bdn_has_images' ) ) {
 				//Replace straight quotes in the cutline so they don't foul up the tag
 				$cutline = str_replace( '"', '&quot', get_post_field( 'post_excerpt', $image ) );
 				
-				//Integreates with Scott Bressler's media credit
+				//Integrates with Scott Bressler's media credit
 				if( function_exists( 'get_media_credit_html' ) )
 					$credit = get_media_credit_html( $image );
 				
@@ -159,11 +162,11 @@ if( !function_exists( 'bdn_has_images' ) ) {
 				
 				//Get the image url
 				$image_url = $$size;
-				$image_url = $image_url[ 0 ];
+				$image_url = reset( $image_url );
 
 				//If we're linking to something, do it up.
 				if( 'image' == $link ) {
-					echo '<a href="' . $large[ 0 ] . '" class="thickbox image_large" rel="gallery-' . $id . '" title="' . strip_tags( $cutline ) . '">';
+					echo '<a href="' . reset( $large ) . '" class="thickbox image_large" rel="gallery-' . $id . '" title="' . strip_tags( $cutline ) . '">';
 				} elseif( 'article' == $link ) {
 					echo '<a href="' . get_permalink( $id ) . '" title="' . get_the_title( $id ) . '">';
 				}
@@ -198,18 +201,9 @@ if( !function_exists( 'bdn_has_images' ) ) {
 			$width = intval( $width );
 			$height = intval( $height );
 			
-			//Check to see if we should be using a smaller version of the thumb
-			if( $width <= 25 ) {
-				$size = '25thumb';
-			} elseif( $width <= 75 ) {
-				$size = '75thumb';
-			} else {
-				$size = 'thumbnail';
-			}
-			
 			$images = bdn_get_images( $id, array( 'numberposts' => 1 ) );
 			
-			if( $images ) {
+			if( $images && is_array( $images ) ) {
 				foreach( $images as $image ) {
 				
 					$meta = wp_get_attachment_metadata( $image );
